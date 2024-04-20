@@ -1,7 +1,7 @@
 //#include <torch/torch.h>
 
 #include <torch/script.h> // PyTorch C++ API
-#include <opencv2/opencv.hpp> // OpenCV для работы с видео
+#include <opencv2/opencv.hpp> // OpenCV 
 #include <iostream>
 
 
@@ -79,13 +79,9 @@ void DrawBoxes(cv::Mat &img, std::vector<Box> &boxes) {
 
 
 int main() {
-    // Загрузка модели из файла
     torch::jit::script::Module model = torch::jit::load("../../best.torchscript");
-    // Загрузка видео
 
     cv::VideoCapture cap("../../test_vid.mp4");
-    //cv::VideoCapture cap(0);
-    // Проверка открылся ли видеофайл 
     if (!cap.isOpened()) {
         std::cerr << "Error: Unable to open video file." << std::endl;
         return -1;
@@ -93,8 +89,6 @@ int main() {
 
     cv::Mat frame;
     while (cap.read(frame)) {
-        // Предобработка кадра
-        // Преобразование кадра в формат, совместимый с PyTorch
         cv::Mat inputFrame;
         cv::cvtColor(frame, inputFrame, cv::COLOR_BGR2RGB);
         cv::normalize(frame,frame, 0.0,1.0, cv::NORM_MINMAX, CV_32F);
@@ -103,19 +97,16 @@ int main() {
         cv::Mat tensorFrame;
         resizedFrame.convertTo(tensorFrame, CV_32FC3, 1.0f / 255.0f);
         torch::Tensor inputTensor = torch::from_blob(tensorFrame.data, {640, 640, 3},torch::kFloat32).permute({2,0,1}).unsqueeze(0);
-        // Применение модели
         std::vector<torch::jit::IValue> inputs;
         inputs.push_back(inputTensor);
         at::Tensor outputs = model.forward(inputs).toTensor();
-        // Обработка результатов
         std::vector<Box> boxes = getBoxes(outputs);
         DrawBoxes(resizedFrame,boxes);
-        // Вывод обработанного кадра
         cv::namedWindow("OUT", cv::WINDOW_NORMAL);
         cv::cvtColor(resizedFrame, resizedFrame, cv::COLOR_RGB2BGR);
         cv::imshow("OUT", resizedFrame);
         cv::resizeWindow("OUT", 640,640);
-        if (cv::waitKey(1) == 27) // Нажмите ESC для выхода
+        if (cv::waitKey(1) == 27) // Press ESC to close window
             break;
     }
 
